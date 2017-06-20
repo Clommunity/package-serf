@@ -1,6 +1,10 @@
 INSTALLDIR = $(DESTDIR)
 ARCH ?= $(shell uname -m|sed 's/i.86/i386/'|sed 's/^arm.*/arm/')
 
+ifeq ($(ARCH),amd64)
+	ARCH = x86_64
+endif
+
 all:
 	@echo "all"
 clean:
