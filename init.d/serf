@@ -13,7 +13,8 @@
 NAME=serf
 SERFPATH="/opt/serf"
 SERFBIN="$SERFPATH/$NAME"
-CONFFILE="/etc/avahi-ps-serf.conf"
+CLOUDYCONFFILE="/etc/cloudy/cloudy.conf"
+SERFCONFFILE="/etc/avahi-ps-serf.conf"
 PIDFILE="/var/run/serf.pid"
 IDNUM=50
 HOST_ID=${SERFPATH}/HostID
@@ -26,12 +27,13 @@ SERF_BIND="5000"
 SERF_LOG="/dev/null"
 AGENTPROFILE="wan"
 
-test -f $CONFFILE && . $CONFFILE || { echo "Error: configuration file $CONFFILE not found. Exiting..."| tee -a $SERF_LOG && exit 1; }
+test -f $CLOUDYCONFFILE && . $CLOUDYCONFFILE || { echo "Warning: configuration file $CLOUDYCONFFILE not found. Continuing..."| tee -a $SERF_LOG ; }
+test -f $SERFCONFFILE && . $SERFCONFFILE || { echo "Error: configuration file $SERFCONFFILE not found. Exiting..."| tee -a $SERF_LOG && exit 1; }
 
-PUBLIC_DEVICE=${SERF_INTERFACE}
-PUBLIC_DEVICE=${SERF_INTERFACE:-'eth0'} 
+if [ -z "$SERF_INTERFACE" ]; then SERF_INTERFACE=${PRIMARYINTERFACE}; fi
+if [ -z "$SERF_INTERFACE" ]; then SERF_INTERFACE=eth0; fi
 
-PUBLIC_IP=$(ip addr show dev $PUBLIC_DEVICE|grep "global.* $PUBLIC_DEVICE\$"|awk '{print $2}'|awk -F "/" {'print $1'})
+PUBLIC_IP=$(ip addr show dev $SERF_INTERFACE|grep "global.* $SERF_INTERFACE\$"|awk '{print $2}'|awk -F "/" {'print $1'})
 
 [ -z "$SERF_JOIN" ] &&  PEERS="" || PEERS="-join $SERF_JOIN"
 
