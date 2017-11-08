@@ -7,9 +7,10 @@ SERF_CONFIGFILE="/etc/avahi-ps-serf.conf"
 SERFTAG="services"
 SERFSTATUS="alive"
 LOGFILE="/tmp/avahi-ps-serf.log"
-IPFSDIR="/var/local/ipfs/"
-IPFSBIN="go-ipfs/ipfs"
 IPFSTAG="ipfssvc"
+IPFSPATH="/etc/cloudy/ipfs/"
+IPFSBINPATH="/usr/local/bin/"
+IPFSBIN="ipfs"
 SERVICESDIR="services/"
 IPFSLOG="ipfs.log"
 [[ -f $SERF_CONFIGFILE ]] && . $SERF_CONFIGFILE
@@ -45,12 +46,12 @@ getIPFSServices() {
 	local defServices
 	defServices=""
 	svcHash=$1
-	export IPFS_PATH=$IPFSDIR
-	lServices=$($IPFSDIR$IPFSBIN ls $svcHash | grep -o "\w*Qm\w*")
+	export IPFS_PATH=$IPFSPATH
+	lServices=$($IPFSBINPATH$IPFSBIN ls $svcHash | grep -o "\w*Qm\w*")
 	for i in $lServices
 	do
-	 svc=$($IPFSDIR$IPFSBIN cat $i)
-	 echo $svc >> "$IPFSDIR"svc
+	 svc=$($IPFSBINPATH$IPFSBIN cat $i)
+	 echo $svc >> "$IPFSPATH"svc
 	 if [ ! -z "$defServices" ]
 	 then
 		defServices=$svc","$defServices
@@ -62,13 +63,13 @@ getIPFSServices() {
 }
 
 addIPFSService() {
-	export IPFS_PATH=$IPFSDIR
+	export IPFS_PATH=$IPFSPATH
 	hash=$(echo $2 $3 | md5sum | cut -d' ' -f 1)
 	if [ ! -z "$hash" ]
 	then
-		echo $1 > $IPFSDIR$SERVICESDIR$hash && addServiceDirToIPFS #directoryhash=$($IPFSDIR$IPFSBIN add -r $IPFSDIR$SERVICESDIR | rev | cut -d' ' -f 2 | rev | tail -n 1)
+		echo $1 > $IPFSPATH$SERVICESDIR$hash && addServiceDirToIPFS #directoryhash=$($IPFSBINPATH$IPFSBIN add -r $IPFSPATH$SERVICESDIR | rev | cut -d' ' -f 2 | rev | tail -n 1)
 		##add directory to IPFS and get hash of directory
-		#[ ! -z "$directoryhash" ] && $SERFBIN tags -set ${IPFSTAG}=$directoryhash && echo "added directory "$directoryhash >> $IPFSDIR$IPFSLOG
+		#[ ! -z "$directoryhash" ] && $SERFBIN tags -set ${IPFSTAG}=$directoryhash && echo "added directory "$directoryhash >> $IPFSPATH$IPFSLOG
 		#$SERFBIN tags -set ${IPFSTAG}=$directoryhash
 		#publish to ipns peer id
 		#$IPFSBIN name publish $directoryhash
@@ -76,9 +77,9 @@ addIPFSService() {
 }
 
 addServiceDirToIPFS(){
-	directoryhash=$($IPFSDIR$IPFSBIN add -r $IPFSDIR$SERVICESDIR | rev | cut -d' ' -f 2 | rev | tail -n 1)
+	directoryhash=$($IPFSBINPATH$IPFSBIN add -r $IPFSPATH$SERVICESDIR | rev | cut -d' ' -f 2 | rev | tail -n 1)
 	#add directory to IPFS and get hash of directory
-	[ ! -z "$directoryhash" ] && $SERFBIN tags -set ${IPFSTAG}=$directoryhash #&& echo "added directory "$directoryhash >> $IPFSDIR$IPFSLOG
+	[ ! -z "$directoryhash" ] && $SERFBIN tags -set ${IPFSTAG}=$directoryhash #&& echo "added directory "$directoryhash >> $IPFSPATH$IPFSLOG
 	$SERFBIN tags -set ${IPFSTAG}=$directoryhash
 
 }
@@ -95,7 +96,7 @@ addMySERFService() {
 }
 
 remMyIPFSService() {
-	rm $IPFSDIR$SERVICESDIR$1 && addServiceDirToIPFS
+	rm $IPFSPATH$SERVICESDIR$1 && addServiceDirToIPFS
 }
 
 remMyService() {
