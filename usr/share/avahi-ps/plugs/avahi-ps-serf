@@ -47,10 +47,10 @@ getIPFSServices() {
 	defServices=""
 	svcHash=$1
 	export IPFS_PATH=$IPFSPATH
-	lServices=$($IPFSBINPATH$IPFSBIN ls $svcHash | grep -o "\w*Qm\w*")
+	lServices=$(timeout 10 $IPFSBINPATH$IPFSBIN ls $svcHash | grep -o "\w*Qm\w*")
 	for i in $lServices
 	do
-	 svc=$($IPFSBINPATH$IPFSBIN cat $i)
+	 svc=$(timeout 5 $IPFSBINPATH$IPFSBIN cat $i)
 	 echo $svc >> "$IPFSPATH"svc
 	 if [ ! -z "$defServices" ]
 	 then
