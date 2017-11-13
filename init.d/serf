@@ -33,7 +33,7 @@ test -f $SERFCONFFILE && . $SERFCONFFILE || { echo "Error: configuration file $S
 if [ -z "$SERF_INTERFACE" ]; then SERF_INTERFACE=${PRIMARYINTERFACE}; fi
 if [ -z "$SERF_INTERFACE" ]; then SERF_INTERFACE=eth0; fi
 
-PUBLIC_IP=$(ip addr show dev $SERF_INTERFACE|grep "global.* $SERF_INTERFACE\$"|awk '{print $2}'|awk -F "/" {'print $1'})
+PUBLIC_IP=$(ip -4 -o addr show up primary scope global $SERF_INTERFACE | sed 's/  */ /g' | cut -d '/' -f1 | grep -o '[^ ]*$')
 
 [ -z "$SERF_JOIN" ] &&  PEERS="" || PEERS="-join $SERF_JOIN"
 
