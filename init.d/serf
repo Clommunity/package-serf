@@ -53,8 +53,10 @@ start() {
 	echo $! > $PIDFILE
 }
 stop() {
-  kill -9 $(cat $PIDFILE)
-  rm $PIDFILE
+	[ -f $PIDFILE ] && echo "Stopping serf. Sending terminate signal to process $(cat $PIDFILE)..." && kill -15 $(cat $PIDFILE) && sleep 1
+	$(netstat -ant|grep ${SERF_RPC_ADDR}|grep -q LISTEN) && echo "Sending interrupt signal to process $(cat $PIDFILE)..." && kill -2 $(cat $PIDFILE) && sleep 1
+	$(netstat -ant|grep ${SERF_RPC_ADDR}|grep -q LISTEN) && echo "Sending kill signal to process $(cat $PIDFILE)..." && kill -9 $(cat $PIDFILE) && sleep 1
+	! $(netstat -ant|grep ${SERF_RPC_ADDR}|grep -q LISTEN) && [ -f $PIDFILE ] && rm $PIDFILE
 }
 restart() {
   stop
