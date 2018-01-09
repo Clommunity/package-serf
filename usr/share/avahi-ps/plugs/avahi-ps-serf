@@ -7,12 +7,7 @@ SERF_CONFIGFILE="/etc/avahi-ps-serf.conf"
 SERFTAG="services"
 SERFSTATUS="alive"
 LOGFILE="/tmp/avahi-ps-serf.log"
-IPFSTAG="ipfssvc"
-IPFSPATH="/etc/cloudy/ipfs/"
-IPFSBINPATH="/usr/local/bin/"
-IPFSBIN="ipfs"
-SERVICESDIR="services/"
-IPFSLOG="ipfs.log"
+
 [[ -f $SERF_CONFIGFILE ]] && . $SERF_CONFIGFILE
 
 comprimir() {
@@ -23,68 +18,14 @@ descomprimir(){
 	base64 -d -|bunzip2 -
 }
 
-getMy_SERFTAG_Services() {
+getMyServices() {
 	local lServices
 
 	lServices=$($SERFBIN info -format json|jq -c -M ".tags.${SERFTAG}")
 	[ ! -z "$lServices" -a "$lServices" != "null" ] && echo "$lServices"|sed 's/^"\(.*\)"$/\1/'|descomprimir|sed "s/'/"'"'"/g"|jq -c .[]
 }
-getMyServices() {
-	local lServices
 
-	lServices=$($SERFBIN info -format json|jq -c -M ".tags.${IPFSTAG}" | tr -d '"')
-	if [ ! -z "$lServices" -a "$lServices" != "null" ]
-	then
-		svces=$(getIPFSServices $lServices)
-		echo $svces
-	fi
-}
-
-getIPFSServices() {
-	local svcHash
-	local lServices
-	local defServices
-	defServices=""
-	svcHash=$1
-	export IPFS_PATH=$IPFSPATH
-	lServices=$(timeout 10 $IPFSBINPATH$IPFSBIN ls $svcHash | grep -o "\w*Qm\w*")
-	for i in $lServices
-	do
-	 svc=$(timeout 5 $IPFSBINPATH$IPFSBIN cat $i)
-	 echo $svc >> "$IPFSPATH"svc
-	 if [ ! -z "$defServices" ]
-	 then
-		defServices=$svc","$defServices
-	 else
-		defServices=$svc
-	 fi
-	done
-	echo "$defServices" | sed "s/'/"'"'"/g" #| jq -c -M .[]
-}
-
-addIPFSService() {
-	export IPFS_PATH=$IPFSPATH
-	hash=$(echo $2 $3 | md5sum | cut -d' ' -f 1)
-	if [ ! -z "$hash" ]
-	then
-		echo $1 > $IPFSPATH$SERVICESDIR$hash && addServiceDirToIPFS #directoryhash=$($IPFSBINPATH$IPFSBIN add -r $IPFSPATH$SERVICESDIR | rev | cut -d' ' -f 2 | rev | tail -n 1)
-		##add directory to IPFS and get hash of directory
-		#[ ! -z "$directoryhash" ] && $SERFBIN tags -set ${IPFSTAG}=$directoryhash && echo "added directory "$directoryhash >> $IPFSPATH$IPFSLOG
-		#$SERFBIN tags -set ${IPFSTAG}=$directoryhash
-		#publish to ipns peer id
-		#$IPFSBIN name publish $directoryhash
-	fi
-}
-
-addServiceDirToIPFS(){
-	directoryhash=$($IPFSBINPATH$IPFSBIN add -r $IPFSPATH$SERVICESDIR | rev | cut -d' ' -f 2 | rev | tail -n 1)
-	#add directory to IPFS and get hash of directory
-	[ ! -z "$directoryhash" ] && $SERFBIN tags -set ${IPFSTAG}=$directoryhash #&& echo "added directory "$directoryhash >> $IPFSPATH$IPFSLOG
-	$SERFBIN tags -set ${IPFSTAG}=$directoryhash
-
-}
-
-addMySERFService() {
+addMyService() {
 	myServices="$(getAllButOneServices $2 $3)"
 	defServices=""
 	for i in $myServices
@@ -93,10 +34,6 @@ addMySERFService() {
 	done
 	defServices=$defServices$1
 	$SERFBIN tags -set ${SERFTAG}=$(echo "["$defServices"]" | comprimir)
-}
-
-remMyIPFSService() {
-	rm $IPFSPATH$SERVICESDIR$1 && addServiceDirToIPFS
 }
 
 remMyService() {
@@ -157,7 +94,7 @@ setToMyServices(){
 	myService=$(existService "$_Type" "$_Desc" "$_MCloud" "$_Ip" "$_Port" "$_Device" "$_TXT")
 
 	[ -z "$myService" ] && {
-		addIPFSService "{'s':'$_Type','d':'$_Desc','m':'$_MCloud','i':'$_Ip','p':'$_Port','e':'$_Device','t':'$_TXT'}" "$_Type" "$_Port"
+		addMyService "{'s':'$_Type','d':'$_Desc','m':'$_MCloud','i':'$_Ip','p':'$_Port','e':'$_Device','t':'$_TXT'}" "$_Type" "$_Port"
 	}
 
 }
@@ -201,11 +138,11 @@ serf_rem_service(){
 
 	local Service
 	local Port
-	local s
+
 	Service=$1
 	Port=$2
-	s=$(getOneService $1 $2)
-	[ ! -z "$s" ] && remMyIPFSService $(echo $Service $Port | md5sum | cut -d' ' -f 1)
+
+	[ ! -z "$(getOneService $1 $2)" ] && remMyService "$Service" "$Port"
 }
 
 serf_add_nodeid() {
@@ -224,31 +161,15 @@ serf_find_(){
 	local defServices
 
 	defServices=""
-	ipfsServices=""
 	listServices="$($SERFBIN members -status=$SERFSTATUS -format json|jq -c -M '.members[]')"
 
 	for node in $listServices
 	do
 		node_id=$(echo "$node"|jq -c -M ".name")
 		mytags=$(echo "$node"|jq -c -M ".tags.${SERFTAG}"|sed 's/^"\(.*\)"$/\1/'|grep -v "^null$")
-		ipfstags=$(echo "$node"|jq -c -M ".tags.${IPFSTAG}"|sed 's/^"\(.*\)"$/\1/'|grep -v "^null$")
 		[ ! -z "$mytags" ] && {
 			myServices=$(echo "$mytags"|descomprimir|sed "s/'/"'"'"/g"|jq -c -M .[])
 			for i in $myServices
-			do
-				iservice="$(serf_add_nodeid "$node_id" "$i")"
-				if [ ! -z "$defServices" ]
-				then
-					defServices=$iservice","$defServices
-				else
-					defServices=$iservice
-				fi
-			done
-		}
-
-		[ ! -z "$ipfstags" ] && {
-			myServices=$(getIPFSServices $ipfstags)
-			for i in "$myServices"
 			do
 				iservice="$(serf_add_nodeid "$node_id" "$i")"
 				if [ ! -z "$defServices" ]
