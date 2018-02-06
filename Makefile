@@ -14,6 +14,7 @@ install:
 	mkdir -p $(INSTALLDIR)/opt/serf
 	mkdir -p $(INSTALLDIR)/etc/init.d/
 	mkdir -p $(INSTALLDIR)/usr/share/avahi-ps/plugs/
+	mkdir -p $(INSTALLDIR)/usr/share/avahi-service/files
 	@echo "Install files"
 	install -m 0755 init.d/serf $(INSTALLDIR)/etc/init.d/
 	install -m 0755 bin/$(ARCH)/serf $(INSTALLDIR)/opt/serf/
