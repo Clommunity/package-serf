@@ -94,7 +94,7 @@ setToMyServices(){
 	myService=$(existService "$_Type" "$_Desc" "$_MCloud" "$_Ip" "$_Port" "$_Device" "$_TXT")
 
 	[ -z "$myService" ] && {
-		addMyService "{'s':'$_Type','d':'$_Desc','m':'$_MCloud','i':'$_Ip','p':'$_Port','e':'$_Device','t':'$_TXT'}" "$_Type" "$_Port"
+		addMyService "{\"s\":\"$_Type\",\"d\":\"$_Desc\",\"m\":\"$_MCloud\",\"i\":\"$_Ip\",\"p\":\"$_Port\",\"e\":\"$_Device\",\"t\":\"$_TXT\"}" "$_Type" "$_Port"
 	}
 
 }
